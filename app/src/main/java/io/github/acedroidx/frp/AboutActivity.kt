@@ -93,21 +93,7 @@ class AboutActivity : ComponentActivity() {
             verticalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier.padding(16.dp)
         ) {
-            // 当前仓库（二次开发）
-            Text("本仓库（二次开发）：", style = MaterialTheme.typography.titleMedium)
-            Text(buildAnnotatedString {
-                val link = LinkAnnotation.Url(
-                    "https://github.com/ahsaboy/frp-Android",
-                    TextLinkStyles(SpanStyle(color = MaterialTheme.colorScheme.primary))
-                ) {
-                    val url = (it as LinkAnnotation.Url).url
-                    uriHandler.openUri(url)
-                }
-                withLink(link) { append("https://github.com/ahsaboy/frp-Android") }
-            })
-
-            // 原 App 作者
-            Text("原 App 作者 (AceDroidX)：", style = MaterialTheme.typography.titleMedium)
+            Text("App 作者 (AceDroidX)：", style = MaterialTheme.typography.titleMedium)
             Text(buildAnnotatedString {
                 val link = LinkAnnotation.Url(
                     "https://github.com/AceDroidX/frp-Android",
@@ -118,9 +104,31 @@ class AboutActivity : ComponentActivity() {
                 }
                 withLink(link) { append("https://github.com/AceDroidX/frp-Android") }
             })
+            Text("非常感谢以下作者对 App 开发所做的贡献：", style = MaterialTheme.typography.titleMedium)
+            Text("ahsaboy: 添加应用图标、快捷开关、Tasker集成并优化了诸多功能", style = MaterialTheme.typography.titleMedium)
+            Text(buildAnnotatedString {
+                val link = LinkAnnotation.Url(
+                    "https://github.com/ahsaboy",
+                    TextLinkStyles(SpanStyle(color = MaterialTheme.colorScheme.primary))
+                ) {
+                    val url = (it as LinkAnnotation.Url).url
+                    uriHandler.openUri(url)
+                }
+                withLink(link) { append("https://github.com/ahsaboy") }
+            })
+            Text("z156854666: 新增同时启动多个frpc功能", style = MaterialTheme.typography.titleMedium)
+            Text(buildAnnotatedString {
+                val link = LinkAnnotation.Url(
+                    "https://github.com/z156854666",
+                    TextLinkStyles(SpanStyle(color = MaterialTheme.colorScheme.primary))
+                ) {
+                    val url = (it as LinkAnnotation.Url).url
+                    uriHandler.openUri(url)
+                }
+                withLink(link) { append("https://github.com/z156854666") }
+            })
 
-            // frp 原作者
-            Text("frp 原作者 (fatedier)：", style = MaterialTheme.typography.titleMedium)
+            Text("frp 作者 (fatedier)：", style = MaterialTheme.typography.titleMedium)
             Text(buildAnnotatedString {
                 val link = LinkAnnotation.Url(
                     "https://github.com/fatedier/frp",
