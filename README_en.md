@@ -1,6 +1,6 @@
 # frp-Android
 A frp client for Android  
-一个Android的frpc客户端
+一个Android的frp客户端
 
 [简体中文](README.md) | English
 
@@ -29,7 +29,8 @@ The content for ```STORE_FILE``` should be the base64 from step 1, while you sho
 ### Compiling via Android Studio
 
 1. Create an APK signing key configuration file named ```keystore.properties``` at the root directory of the project, referencing the existing ```keystore.example.properties``` file at the same level.
-2. Compile and package using Android Studio.
+2. Refer to the [script instructions](./scripts/README.md) to run the `update_frp_binaries` script to obtain the latest frp kernel files, or manually download and place them in the appropriate directories.
+3. Compile and package using Android Studio.
 
 ## FAQs
 ### Where does the frp kernel (libfrpc.so) of the project come from?

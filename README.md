@@ -1,6 +1,6 @@
 # frp-Android
 A frp client for Android  
-一个Android的frpc客户端
+一个Android的frp客户端
 
 简体中文 | [English](README_en.md)
 
@@ -28,8 +28,9 @@ base64 -w 0 keystore.jks > keystore.jks.base64
 
 ### 通过Android Studio编译
 
-1. 在项目根目录创建apk签名密钥设置文件```keystore.properties```，内容参考同级的```keystore.example.properties```
-2. 使用Android Studio进行编译打包
+1. 在项目根目录创建apk签名密钥设置文件```keystore.properties```, 内容参考同级的```keystore.example.properties```
+2. 参考[脚本说明](./scripts/README.md)运行`update_frp_binaries`脚本以获取最新的frp内核文件，或者手动下载并放置到相应目录下
+3. 使用Android Studio进行编译打包
 
 ## 常见问题
 ### 项目的frp内核(libfrpc.so)是怎么来的？
