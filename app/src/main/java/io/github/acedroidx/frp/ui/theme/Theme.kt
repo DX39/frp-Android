@@ -13,7 +13,21 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
-import io.github.acedroidx.frp.R
+
+object ThemeModeKeys {
+    const val DARK = "dark"
+    const val LIGHT = "light"
+    const val FOLLOW_SYSTEM = "system"
+
+    fun normalize(value: String?, fallback: String = FOLLOW_SYSTEM): String {
+        return when (value) {
+            DARK, "深色", "Dark" -> DARK
+            LIGHT, "浅色", "Light" -> LIGHT
+            FOLLOW_SYSTEM, "跟随系统", "Follow system" -> FOLLOW_SYSTEM
+            else -> fallback
+        }
+    }
+}
 
 private val DarkColorScheme = darkColorScheme(
     primary = Purple80, secondary = PurpleGrey80, tertiary = Pink80
@@ -37,19 +51,16 @@ private val LightColorScheme = lightColorScheme(
 fun FrpTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true, themeMode: String? = null,  // 新增: "深色", "浅色", "跟随系统", null
+    dynamicColor: Boolean = true,
+    themeMode: String? = null,  // accepts ThemeModeKeys or null
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
-    val darkLabel = context.getString(R.string.theme_mode_dark)
-    val lightLabel = context.getString(R.string.theme_mode_light)
-    val followSystemLabel = context.getString(R.string.theme_mode_follow_system)
-
     // 根据 themeMode 决定是否使用深色主题
     val useDarkTheme = when (themeMode) {
-        darkLabel -> true
-        lightLabel -> false
-        followSystemLabel, null -> darkTheme
+        ThemeModeKeys.DARK -> true
+        ThemeModeKeys.LIGHT -> false
+        ThemeModeKeys.FOLLOW_SYSTEM, null -> darkTheme
         else -> darkTheme
     }
 

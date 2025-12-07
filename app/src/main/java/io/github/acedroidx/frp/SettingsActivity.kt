@@ -39,6 +39,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.acedroidx.frp.ui.theme.FrpTheme
+import io.github.acedroidx.frp.ui.theme.ThemeModeKeys
 import kotlinx.coroutines.flow.MutableStateFlow
 
 class SettingsActivity : ComponentActivity() {
@@ -59,19 +60,10 @@ class SettingsActivity : ComponentActivity() {
         preferences = getSharedPreferences("data", MODE_PRIVATE)
         isStartup.value = preferences.getBoolean(PreferencesKey.AUTO_START, false)
 
-        val followSystem = getString(R.string.theme_mode_follow_system)
-        val darkLabel = getString(R.string.theme_mode_dark)
-        val lightLabel = getString(R.string.theme_mode_light)
-
         // 读取主题设置，默认为跟随系统
         val rawTheme =
-            preferences.getString(PreferencesKey.THEME_MODE, followSystem) ?: followSystem
-        themeMode.value = when (rawTheme) {
-            darkLabel, "深色", "Dark" -> darkLabel
-            lightLabel, "浅色", "Light" -> lightLabel
-            followSystem, "跟随系统", "Follow system" -> followSystem
-            else -> rawTheme
-        }
+            preferences.getString(PreferencesKey.THEME_MODE, ThemeModeKeys.FOLLOW_SYSTEM)
+        themeMode.value = ThemeModeKeys.normalize(rawTheme)
 
         // 读取 Tasker 权限设置，默认为允许
         allowTasker.value = preferences.getBoolean(PreferencesKey.ALLOW_TASKER, true)
@@ -88,7 +80,7 @@ class SettingsActivity : ComponentActivity() {
 
         enableEdgeToEdge()
         setContent {
-            val currentTheme by themeMode.collectAsStateWithLifecycle(followSystem)
+            val currentTheme by themeMode.collectAsStateWithLifecycle(themeMode.value.ifEmpty { ThemeModeKeys.FOLLOW_SYSTEM })
             FrpTheme(themeMode = currentTheme) {
                 Scaffold(topBar = {
                     TopAppBar(title = {
@@ -118,16 +110,16 @@ class SettingsActivity : ComponentActivity() {
     @Composable
     fun SettingsContent() {
         val isAutoStart by isStartup.collectAsStateWithLifecycle(false)
-        val currentTheme by themeMode.collectAsStateWithLifecycle(stringResource(R.string.theme_mode_follow_system))
+        val currentTheme by themeMode.collectAsStateWithLifecycle(themeMode.value.ifEmpty { ThemeModeKeys.FOLLOW_SYSTEM })
         val isTaskerAllowed by allowTasker.collectAsStateWithLifecycle(true)
         val isExcludeFromRecents by excludeFromRecents.collectAsStateWithLifecycle(false)
         val currentQuickTileConfig by quickTileConfig.collectAsStateWithLifecycle(null)
         val configs by allConfigs.collectAsStateWithLifecycle(emptyList())
 
         val themeOptions = listOf(
-            stringResource(R.string.theme_mode_dark),
-            stringResource(R.string.theme_mode_light),
-            stringResource(R.string.theme_mode_follow_system)
+            ThemeModeKeys.DARK to stringResource(R.string.theme_mode_dark),
+            ThemeModeKeys.LIGHT to stringResource(R.string.theme_mode_light),
+            ThemeModeKeys.FOLLOW_SYSTEM to stringResource(R.string.theme_mode_follow_system)
         )
 
         Column(
@@ -152,13 +144,13 @@ class SettingsActivity : ComponentActivity() {
             // 主题切换设置项
             SettingItemWithDropdown(
                 title = stringResource(R.string.theme_mode_title),
-                currentValue = currentTheme,
+                currentKey = currentTheme,
                 options = themeOptions,
-                onValueChange = { newTheme ->
+                onValueChange = { newThemeKey ->
                     val editor = preferences.edit()
-                    editor.putString(PreferencesKey.THEME_MODE, newTheme)
+                    editor.putString(PreferencesKey.THEME_MODE, newThemeKey)
                     editor.apply()
-                    themeMode.value = newTheme
+                    themeMode.value = ThemeModeKeys.normalize(newThemeKey)
                 })
 
             HorizontalDivider()
@@ -265,9 +257,15 @@ class SettingsActivity : ComponentActivity() {
 
     @Composable
     fun SettingItemWithDropdown(
-        title: String, currentValue: String, options: List<String>, onValueChange: (String) -> Unit
+        title: String,
+        currentKey: String,
+        options: List<Pair<String, String>>, // key to display label
+        onValueChange: (String) -> Unit
     ) {
         var expanded by remember { mutableStateOf(false) }
+
+        val currentLabel = options.firstOrNull { it.first == currentKey }?.second
+            ?: stringResource(R.string.theme_mode_follow_system)
 
         Row(modifier = Modifier
             .fillMaxWidth()
@@ -280,15 +278,15 @@ class SettingsActivity : ComponentActivity() {
             )
             Box {
                 Text(
-                    text = currentValue,
+                    text = currentLabel,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
                 DropdownMenu(
                     expanded = expanded, onDismissRequest = { expanded = false }) {
                     options.forEach { option ->
-                        DropdownMenuItem(text = { Text(option) }, onClick = {
-                            onValueChange(option)
+                        DropdownMenuItem(text = { Text(option.second) }, onClick = {
+                            onValueChange(option.first)
                             expanded = false
                         })
                     }

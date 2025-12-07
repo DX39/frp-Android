@@ -36,6 +36,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.acedroidx.frp.ui.theme.FrpTheme
+import io.github.acedroidx.frp.ui.theme.ThemeModeKeys
 import kotlinx.coroutines.flow.MutableStateFlow
 
 class AboutActivity : ComponentActivity() {
@@ -49,25 +50,17 @@ class AboutActivity : ComponentActivity() {
 
         preferences = getSharedPreferences("data", MODE_PRIVATE)
         val loadingText = getString(R.string.loading)
-        val followSystem = getString(R.string.theme_mode_follow_system)
-        val darkLabel = getString(R.string.theme_mode_dark)
-        val lightLabel = getString(R.string.theme_mode_light)
         frpVersion.value =
             preferences.getString(PreferencesKey.FRP_VERSION, loadingText) ?: loadingText
         val rawTheme =
-            preferences.getString(PreferencesKey.THEME_MODE, followSystem) ?: followSystem
-        themeMode.value = when (rawTheme) {
-            darkLabel, "深色", "Dark" -> darkLabel
-            lightLabel, "浅色", "Light" -> lightLabel
-            followSystem, "跟随系统", "Follow system" -> followSystem
-            else -> rawTheme
-        }
+            preferences.getString(PreferencesKey.THEME_MODE, ThemeModeKeys.FOLLOW_SYSTEM)
+        themeMode.value = ThemeModeKeys.normalize(rawTheme)
 
         enableEdgeToEdge()
         setContent {
-            val currentTheme by themeMode.collectAsStateWithLifecycle(followSystem)
+            val currentTheme by themeMode.collectAsStateWithLifecycle(themeMode.value.ifEmpty { ThemeModeKeys.FOLLOW_SYSTEM })
             FrpTheme(themeMode = currentTheme) {
-                val frpVersion by frpVersion.collectAsStateWithLifecycle(loadingText)
+                val frpVersion by frpVersion.collectAsStateWithLifecycle(frpVersion.value.ifEmpty { loadingText })
                 Scaffold(topBar = {
                     TopAppBar(title = {
                         Text(

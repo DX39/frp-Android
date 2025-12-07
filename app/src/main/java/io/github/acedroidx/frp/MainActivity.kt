@@ -75,6 +75,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import io.github.acedroidx.frp.ui.theme.FrpTheme
+import io.github.acedroidx.frp.ui.theme.ThemeModeKeys
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import androidx.compose.material3.SnackbarResult
@@ -170,8 +171,6 @@ class MainActivity : ComponentActivity() {
         }
 
         preferences = getSharedPreferences("data", MODE_PRIVATE)
-        val darkLabel = getString(R.string.theme_mode_dark)
-        val lightLabel = getString(R.string.theme_mode_light)
 
         // 应用"最近任务中排除"设置
         val excludeFromRecents = preferences.getBoolean(PreferencesKey.EXCLUDE_FROM_RECENTS, false)
@@ -190,18 +189,11 @@ class MainActivity : ComponentActivity() {
         }
 
         val loadingText = getString(R.string.loading)
-        val followSystem = getString(R.string.theme_mode_follow_system)
         isStartup.value = preferences.getBoolean(PreferencesKey.AUTO_START, false)
         frpVersion.value =
             preferences.getString(PreferencesKey.FRP_VERSION, loadingText) ?: loadingText
-        val rawTheme =
-            preferences.getString(PreferencesKey.THEME_MODE, followSystem) ?: followSystem
-        themeMode.value = when (rawTheme) {
-            darkLabel, "深色", "Dark" -> darkLabel
-            lightLabel, "浅色", "Light" -> lightLabel
-            followSystem, "跟随系统", "Follow system" -> followSystem
-            else -> rawTheme
-        }
+        val rawTheme = preferences.getString(PreferencesKey.THEME_MODE, ThemeModeKeys.FOLLOW_SYSTEM)
+        themeMode.value = ThemeModeKeys.normalize(rawTheme)
 
         checkConfig()
         updateConfigList()
@@ -210,13 +202,13 @@ class MainActivity : ComponentActivity() {
 
         enableEdgeToEdge()
         setContent {
-            val currentTheme by themeMode.collectAsStateWithLifecycle(followSystem)
+            val currentTheme by themeMode.collectAsStateWithLifecycle(themeMode.value)
             val openDialog = remember { mutableStateOf(false) }
             val snackbarHostState = remember { SnackbarHostState() }
             val permissionGranted by permissionGranted.collectAsStateWithLifecycle(true)
 
             FrpTheme(themeMode = currentTheme) {
-                val frpVersion by frpVersion.collectAsStateWithLifecycle(loadingText)
+                val frpVersion by frpVersion.collectAsStateWithLifecycle(frpVersion.value.ifEmpty { loadingText })
                 Scaffold(topBar = {
                     TopAppBar(title = {
                         Text(
@@ -565,17 +557,8 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         // 从 SharedPreferences 重新加载主题设置
-        val darkLabel = getString(R.string.theme_mode_dark)
-        val lightLabel = getString(R.string.theme_mode_light)
-        val followSystem = getString(R.string.theme_mode_follow_system)
-        val savedTheme =
-            preferences.getString(PreferencesKey.THEME_MODE, followSystem) ?: followSystem
-        themeMode.value = when (savedTheme) {
-            darkLabel, "深色", "Dark" -> darkLabel
-            lightLabel, "浅色", "Light" -> lightLabel
-            followSystem, "跟随系统", "Follow system" -> followSystem
-            else -> savedTheme
-        }
+        val savedTheme = preferences.getString(PreferencesKey.THEME_MODE, ThemeModeKeys.FOLLOW_SYSTEM)
+        themeMode.value = ThemeModeKeys.normalize(savedTheme)
 
         // 重新应用"最近任务中排除"设置
         val excludeFromRecents = preferences.getBoolean(PreferencesKey.EXCLUDE_FROM_RECENTS, false)
