@@ -11,6 +11,7 @@ import android.os.IBinder
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import android.util.Log
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 
 @RequiresApi(Build.VERSION_CODES.N)
@@ -55,6 +56,7 @@ class FrpTileService : TileService() {
         val config = getSelectedConfig()
         if (config == null) {
             // 没有配置，打开设置页面让用户选择
+            Toast.makeText(this, R.string.quick_tile_not_configured_toast, Toast.LENGTH_LONG).show()
             val intent = Intent(this, SettingsActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }

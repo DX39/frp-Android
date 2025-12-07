@@ -29,19 +29,19 @@
             android:name=".tasker.ActivityConfigStartFrp"
             android:exported="true"
             android:icon="@mipmap/ic_launcher"
-            android:label="Start FRP Config">
+            android:label="Start frp Config">
             <intent-filter>
                 <action android:name="com.twofortyfouram.locale.intent.action.EDIT_SETTING" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
 
-        <!-- Tasker Plugin Action - Stop FRP -->
+        <!-- Tasker Plugin Action - Stop frp -->
         <activity
             android:name=".tasker.ActivityConfigStopFrp"
             android:exported="true"
             android:icon="@mipmap/ic_launcher"
-            android:label="Stop FRP Config">
+            android:label="Stop frp Config">
             <intent-filter>
                 <action android:name="com.twofortyfouram.locale.intent.action.EDIT_SETTING" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -68,8 +68,9 @@
             android:launchMode="singleTask">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
+                <!-- Quick Settings Tile 长按跳转 -->
+                <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
             </intent-filter>
         </activity>
 
@@ -101,17 +102,6 @@
                 android:name="android.service.quicksettings.TOGGLEABLE_TILE"
                 android:value="true" />
         </service>
-
-        <!-- Quick Settings Tile 长按跳转 -->
-        <activity-alias
-            android:name=".TileSettingsActivity"
-            android:targetActivity=".SettingsActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
-            </intent-filter>
-        </activity-alias>
-
     </application>
 
 </manifest>
