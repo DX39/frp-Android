@@ -82,9 +82,19 @@ class FrpTileService : TileService() {
             startService(intent)
         }
 
-        // 延迟更新状态，等待服务处理完成
+        // 立即更新面板上的文字和状态，避免需要下拉刷新
         qsTile?.let { tile ->
-            tile.state = if (isRunning) Tile.STATE_INACTIVE else Tile.STATE_ACTIVE
+            val nowRunning = !isRunning
+            tile.state = if (nowRunning) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
+            tile.label = config.fileName.removeSuffix(".toml")
+            tile.icon = Icon.createWithResource(this, R.drawable.ic_launcher_foreground)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                tile.subtitle = if (nowRunning) {
+                    getString(R.string.quick_tile_running)
+                } else {
+                    getString(R.string.quick_tile_stopped)
+                }
+            }
             tile.updateTile()
         }
     }
