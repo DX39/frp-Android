@@ -23,7 +23,7 @@ data class FrpConfig(
     }
 
     fun getLogDir(context: Context): File {
-        return File(context.filesDir, "logs/${this.type.typeName}")
+        return File(context.cacheDir, "logs/${this.type.typeName}")
     }
 
     fun getLogFile(context: Context): File {
