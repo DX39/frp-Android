@@ -78,9 +78,12 @@ if [[ $DRY_RUN -eq 1 ]]; then
 fi
 
 # Get release JSON
-release_json=$(curl -sSL "${API_URL}" -H "Accept: application/vnd.github.v3+json" "${AUTH_ARGS[@]}" )
+# Fetch release JSON (fail hard if GitHub returns an error)
+if ! release_json=$(curl -sSL --fail "${API_URL}" -H "Accept: application/vnd.github.v3+json" "${AUTH_ARGS[@]}" ); then
+  err "Failed to fetch release info from GitHub (${API_URL})"; exit 3
+fi
 if [[ -z "${release_json}" || "${release_json}" == "null" ]]; then
-  err "Failed to fetch release info from GitHub"; exit 3
+  err "Release info is empty or null from GitHub"; exit 3
 fi
 
 # Architecture mapping
@@ -125,6 +128,7 @@ process_asset() {
   asset_url=$(find_asset_url "$pattern")
   if [[ -z "$asset_url" || "$asset_url" == "null" ]]; then
     err "Cannot find asset for pattern '${pattern}' (abi ${abi_dir}) in release. Skipping..."
+    # 1 = asset not found (non-fatal when trying alternate candidates)
     return 1
   fi
 
@@ -137,7 +141,11 @@ process_asset() {
     log "DRY RUN: would download ${asset_url} to ${filename}"
   else
     log "Downloading ${asset_url}..."
-    curl -sSL --fail -o "${filename}" "${asset_url}"
+    if ! curl -sSL --fail -o "${filename}" "${asset_url}"; then
+      err "Download failed for ${asset_url}";
+      # 2 = download failed (fatal)
+      return 2
+    fi
   fi
 
   local extract_dir="${TMP_BASE}/extract_${abi_dir}"
@@ -154,7 +162,11 @@ process_asset() {
     return 0
   else
     # Get file list
-    file_list=$(tar -tzf "${filename}")
+    if ! file_list=$(tar -tzf "${filename}"); then
+      err "Failed to list archive ${filename}";
+      # 3 = invalid archive or listing failed (fatal)
+      return 3
+    fi
 
     frpc_path=$(grep -E '/frpc$|(^|/)frpc$' <<<"${file_list}" | head -n1 || true)
     frps_path=$(grep -E '/frps$|(^|/)frps$' <<<"${file_list}" | head -n1 || true)
@@ -172,7 +184,11 @@ process_asset() {
     fi
 
     log "Extracting $frpc_path and $frps_path to ${extract_dir}"
-    tar -xzf "${filename}" -C "${extract_dir}" "$frpc_path" "$frps_path" || true
+    if ! tar -xzf "${filename}" -C "${extract_dir}" "$frpc_path" "$frps_path"; then
+      err "Extraction failed for ${filename}";
+      # 4 = extraction failed (fatal)
+      return 4
+    fi
 
     # The extracted files will be at ${extract_dir}/$frpc_path, get their basenames
     frpc_basename=$(basename "$frpc_path")
@@ -192,7 +208,8 @@ process_asset() {
     if [[ -z "$src_frpc" || -z "$src_frps" ]]; then
       err "Failed to locate extracted frpc/frps files. Please inspect ${extract_dir}"
       ls -l "${extract_dir}" || true
-      return 1
+      # 5 = missing expected binaries in archive (fatal)
+      return 5
     fi
 
     dest_dir="${DEST_BASE}/${abi_dir}"
@@ -224,10 +241,8 @@ process_asset() {
 for abi in "${!ARCH_MAP[@]}"; do
   mapping=${ARCH_MAP[$abi]}
   # For linux arm, accept both linux_arm and linux_arm_hf (hf = hardware float) in matching
-  pattern=${mapping}
-
   if [[ "$mapping" == "linux_arm" ]]; then
-    # special-case: try linux_arm_hf first, then linux_arm
+    # try linux_arm_hf first, then linux_arm
     pattern_candidates=("linux_arm_hf" "linux_arm")
   else
     pattern_candidates=("${mapping}")
@@ -238,11 +253,22 @@ for abi in "${!ARCH_MAP[@]}"; do
     if process_asset "$candidate" "$abi"; then
       downloaded=0
       break
+    else
+      rc=$?
+      # If asset wasn't found for this candidate, try the next candidate (rc == 1)
+      if [[ $rc -eq 1 ]]; then
+        log "Asset not found for candidate '${candidate}', trying next candidate if available..."
+        continue
+      else
+        err "Fatal error processing asset for abi ${abi} (candidate: ${candidate}), exit code ${rc}. Exiting immediately."
+        exit $rc
+      fi
     fi
   done
 
   if [[ $downloaded -ne 0 ]]; then
-    err "Failed to process asset for abi ${abi}"
+    err "No suitable asset found for abi ${abi}. Exiting with code 6."
+    exit 6
   fi
 done
 
