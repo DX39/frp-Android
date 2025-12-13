@@ -8,6 +8,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -46,6 +49,9 @@ import androidx.core.content.edit
 
 class SettingsActivity : ComponentActivity() {
     private val isStartup = MutableStateFlow(false)
+    private val isStartupLaunch = MutableStateFlow(false)
+    private val isStartupBroadcast = MutableStateFlow(false)
+    private val isStartupBroadcastExtra = MutableStateFlow(false)
     private val themeMode = MutableStateFlow("")
     private val allowTasker = MutableStateFlow(true)
     private val excludeFromRecents = MutableStateFlow(false)
@@ -61,6 +67,12 @@ class SettingsActivity : ComponentActivity() {
 
         preferences = getSharedPreferences("data", MODE_PRIVATE)
         isStartup.value = preferences.getBoolean(PreferencesKey.AUTO_START, false)
+        // 新增自动启动选项的读取
+        isStartupLaunch.value = preferences.getBoolean(PreferencesKey.AUTO_START_LAUNCH, false)
+        isStartupBroadcast.value =
+            preferences.getBoolean(PreferencesKey.AUTO_START_BROADCAST, false)
+        isStartupBroadcastExtra.value =
+            preferences.getBoolean(PreferencesKey.AUTO_START_BROADCAST_EXTRA, false)
 
         // 读取主题设置，默认为跟随系统
         val rawTheme = preferences.getString(PreferencesKey.THEME_MODE, ThemeModeKeys.FOLLOW_SYSTEM)
@@ -127,109 +139,175 @@ class SettingsActivity : ComponentActivity() {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(0.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // 开机自启动设置项
-            SettingItemWithSwitch(
-                title = stringResource(R.string.auto_start_switch),
-                checked = isAutoStart,
-                onCheckedChange = { checked ->
-                    preferences.edit {
-                        putBoolean(PreferencesKey.AUTO_START, checked)
-                    }
-                    isStartup.value = checked
-                })
+            // 主题/快捷/Tasker/最近任务分组（Card）
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(8.dp)) {
+                    // 主题切换设置项
+                    SettingItemWithDropdown(
+                        title = stringResource(R.string.theme_mode_title),
+                        currentKey = currentTheme,
+                        options = themeOptions,
+                        onValueChange = { newThemeKey ->
+                            preferences.edit {
+                                putString(PreferencesKey.THEME_MODE, newThemeKey)
+                            }
+                            themeMode.value = ThemeModeKeys.normalize(newThemeKey)
+                        })
 
-            HorizontalDivider()
+                    Spacer(modifier = Modifier.height(8.dp))
+                    // 快捷开关配置选择
+                    SettingItemWithConfigSelector(
+                        title = stringResource(R.string.quick_tile_config),
+                        currentConfig = currentQuickTileConfig,
+                        configs = configs,
+                        onConfigChange = { config ->
+                            preferences.edit {
+                                if (config != null) {
+                                    putString(
+                                        PreferencesKey.QUICK_TILE_CONFIG_TYPE, config.type.name
+                                    )
+                                    putString(
+                                        PreferencesKey.QUICK_TILE_CONFIG_NAME, config.fileName
+                                    )
+                                } else {
+                                    remove(PreferencesKey.QUICK_TILE_CONFIG_TYPE)
+                                    remove(PreferencesKey.QUICK_TILE_CONFIG_NAME)
+                                }
+                            }
+                            quickTileConfig.value = config
+                        })
 
-            // 主题切换设置项
-            SettingItemWithDropdown(
-                title = stringResource(R.string.theme_mode_title),
-                currentKey = currentTheme,
-                options = themeOptions,
-                onValueChange = { newThemeKey ->
-                    preferences.edit {
-                        putString(PreferencesKey.THEME_MODE, newThemeKey)
-                    }
-                    themeMode.value = ThemeModeKeys.normalize(newThemeKey)
-                })
+                    // 允许 Tasker 调用设置项
+                    SettingItemWithSwitch(
+                        title = stringResource(R.string.allow_tasker_title),
+                        checked = isTaskerAllowed,
+                        onCheckedChange = { checked ->
+                            preferences.edit {
+                                putBoolean(PreferencesKey.ALLOW_TASKER, checked)
+                            }
+                            allowTasker.value = checked
+                        })
 
-            HorizontalDivider()
+                    // 最近任务中排除设置项
+                    SettingItemWithSwitch(
+                        title = stringResource(R.string.exclude_from_recents_title),
+                        checked = isExcludeFromRecents,
+                        onCheckedChange = { checked ->
+                            preferences.edit {
+                                putBoolean(PreferencesKey.EXCLUDE_FROM_RECENTS, checked)
+                            }
+                            excludeFromRecents.value = checked
 
-            // 快捷开关配置选择
-            SettingItemWithConfigSelector(
-                title = stringResource(R.string.quick_tile_config),
-                currentConfig = currentQuickTileConfig,
-                configs = configs,
-                onConfigChange = { config ->
-                    preferences.edit {
-                        if (config != null) {
-                            putString(PreferencesKey.QUICK_TILE_CONFIG_TYPE, config.type.name)
-                            putString(PreferencesKey.QUICK_TILE_CONFIG_NAME, config.fileName)
-                        } else {
-                            remove(PreferencesKey.QUICK_TILE_CONFIG_TYPE)
-                            remove(PreferencesKey.QUICK_TILE_CONFIG_NAME)
-                        }
-                    }
-                    quickTileConfig.value = config
-                })
-
-            HorizontalDivider()
-
-            // 允许 Tasker 调用设置项
-            SettingItemWithSwitch(
-                title = stringResource(R.string.allow_tasker_title),
-                checked = isTaskerAllowed,
-                onCheckedChange = { checked ->
-                    preferences.edit {
-                        putBoolean(PreferencesKey.ALLOW_TASKER, checked)
-                    }
-                    allowTasker.value = checked
-                })
-
-            HorizontalDivider()
-
-            // 最近任务中排除设置项
-            SettingItemWithSwitch(
-                title = stringResource(R.string.exclude_from_recents_title),
-                checked = isExcludeFromRecents,
-                onCheckedChange = { checked ->
-                    preferences.edit {
-                        putBoolean(PreferencesKey.EXCLUDE_FROM_RECENTS, checked)
-                    }
-                    excludeFromRecents.value = checked
-
-                    // 立即应用设置，不需要重启
-                    try {
-                        val am = getSystemService(ACTIVITY_SERVICE) as android.app.ActivityManager
-                        val appTasks = am.appTasks
-                        android.util.Log.d(
-                            "SettingsActivity", "appTasks size: ${appTasks.size}"
-                        )
-                        if (appTasks.isNotEmpty()) {
-                            for (task in appTasks) {
-                                task.setExcludeFromRecents(checked)
+                            // 立即应用设置，不需要重启
+                            try {
+                                val am =
+                                    getSystemService(ACTIVITY_SERVICE) as android.app.ActivityManager
+                                val appTasks = am.appTasks
                                 android.util.Log.d(
-                                    "SettingsActivity", "Set excludeFromRecents to $checked"
+                                    "SettingsActivity", "appTasks size: ${appTasks.size}"
+                                )
+                                if (appTasks.isNotEmpty()) {
+                                    for (task in appTasks) {
+                                        task.setExcludeFromRecents(checked)
+                                        android.util.Log.d(
+                                            "SettingsActivity", "Set excludeFromRecents to $checked"
+                                        )
+                                    }
+                                } else {
+                                    android.util.Log.w("SettingsActivity", "appTasks is empty")
+                                }
+                            } catch (e: Exception) {
+                                android.util.Log.e(
+                                    "SettingsActivity",
+                                    "Failed to set excludeFromRecents: ${e.message}"
                                 )
                             }
-                        } else {
-                            android.util.Log.w("SettingsActivity", "appTasks is empty")
-                        }
-                    } catch (e: Exception) {
-                        android.util.Log.e(
-                            "SettingsActivity", "Failed to set excludeFromRecents: ${e.message}"
-                        )
-                    }
-                })
+                        })
 
-            HorizontalDivider()
+                }
+            }
+
+            // frp 自启动设置分类（Card）
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(8.dp)) {
+                    Text(
+                        text = stringResource(R.string.auto_start_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                    )
+                    HorizontalDivider()
+
+                    // 开机自启动（移动到自启动分类中）
+                    SettingItemWithSwitch(
+                        title = stringResource(R.string.auto_start_boot),
+                        checked = isAutoStart,
+                        onCheckedChange = { checked ->
+                            preferences.edit {
+                                putBoolean(PreferencesKey.AUTO_START, checked)
+                            }
+                            isStartup.value = checked
+                        })
+
+
+                    // 在打开应用时启动
+                    val isAutoStartLaunch by isStartupLaunch.collectAsStateWithLifecycle(false)
+                    SettingItemWithSwitch(
+                        title = stringResource(R.string.auto_start_launch),
+                        checked = isAutoStartLaunch,
+                        onCheckedChange = { checked ->
+                            preferences.edit {
+                                putBoolean(
+                                    PreferencesKey.AUTO_START_LAUNCH, checked
+                                )
+                            }
+                            isStartupLaunch.value = checked
+                        })
+
+                    // 在收到广播时启动
+                    val isAutoStartBroadcast by isStartupBroadcast.collectAsStateWithLifecycle(false)
+                    SettingItemWithSwitch(
+                        title = stringResource(R.string.auto_start_broadcast),
+                        checked = isAutoStartBroadcast,
+                        onCheckedChange = { checked ->
+                            preferences.edit {
+                                putBoolean(
+                                    PreferencesKey.AUTO_START_BROADCAST, checked
+                                )
+                            }
+                            isStartupBroadcast.value = checked
+                        })
+
+                    // 允许带参数的广播
+                    val isAutoStartBroadcastExtra by isStartupBroadcastExtra.collectAsStateWithLifecycle(
+                        false
+                    )
+                    SettingItemWithSwitch(
+                        title = stringResource(R.string.auto_start_broadcast_extra),
+                        checked = isAutoStartBroadcastExtra,
+                        onCheckedChange = { checked ->
+                            preferences.edit {
+                                putBoolean(
+                                    PreferencesKey.AUTO_START_BROADCAST_EXTRA, checked
+                                )
+                            }
+                            isStartupBroadcastExtra.value = checked
+                        })
+                }
+            }
 
             // 关于设置项
-            SettingItemClickable(
-                title = stringResource(R.string.aboutButton), onClick = {
-                    startActivity(Intent(this@SettingsActivity, AboutActivity::class.java))
-                })
+            // 关于设置项（Card）
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(8.dp)) {
+                    SettingItemClickable(
+                        title = stringResource(R.string.aboutButton), onClick = {
+                            startActivity(Intent(this@SettingsActivity, AboutActivity::class.java))
+                        })
+                }
+            }
         }
     }
 
@@ -240,12 +318,14 @@ class SettingsActivity : ComponentActivity() {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = title, style = MaterialTheme.typography.bodyLarge
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface
             )
             Switch(
                 checked = checked, onCheckedChange = onCheckedChange
@@ -269,11 +349,13 @@ class SettingsActivity : ComponentActivity() {
         Row(modifier = Modifier
             .fillMaxWidth()
             .clickable { expanded = true }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = title, style = MaterialTheme.typography.bodyLarge
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface
             )
             Box {
                 Text(
@@ -301,11 +383,13 @@ class SettingsActivity : ComponentActivity() {
         Row(modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = title, style = MaterialTheme.typography.bodyLarge
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface
             )
             Icon(
                 painter = painterResource(id = R.drawable.ic_arrow_back_24dp),
@@ -333,11 +417,13 @@ class SettingsActivity : ComponentActivity() {
         Row(modifier = Modifier
             .fillMaxWidth()
             .clickable { expanded = true }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = title, style = MaterialTheme.typography.bodyLarge
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface
             )
             Box {
                 Text(

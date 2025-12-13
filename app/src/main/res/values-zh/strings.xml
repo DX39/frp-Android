@@ -1,11 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="frp_for_android_version">frp for Android - %1$s/%2$s</string>
-    <string name="loading">加载中...</string>
+    <string name="loading">加载中…</string>
     <string name="content_desc_back">返回</string>
     <string name="content_desc_settings">设置</string>
     <string name="content_desc_rename_icon">重命名图标</string>
-    <string name="auto_start_switch">开机自启动</string>
+    <string name="auto_start_switch">自启动开关</string>
+    <string name="auto_start_title">frp 自启动设置</string>
+    <string name="auto_start_boot">开机自启动</string>
+    <string name="auto_start_launch">在打开应用时启动</string>
+    <string name="auto_start_broadcast">在收到广播时启动</string>
+    <string name="auto_start_broadcast_extra">允许带参数的广播</string>
     <string name="addConfigButton">添加配置</string>
     <string name="aboutButton">关于</string>
     <string name="frp_log">Frp日志</string>
@@ -64,7 +69,7 @@
     <string name="config_running">运行中</string>
     <string name="content_desc_edit">编辑</string>
     <string name="content_desc_delete_config">删除配置</string>
-    <string name="config_log_title">配置日志</string>
+    <string name="config_log_title">日志</string>
     <string name="confirm_delete_title">确认删除</string>
     <string name="confirm_delete_message">确认删除 %1$s 吗？</string>
     <string name="toast_all_configs_stopped">已停止所有配置</string>
