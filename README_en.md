@@ -13,7 +13,7 @@ A frp client for Android
 
 If you wish to customize the frp kernel, you can compile it via Github Actions or through Android Studio.
 
-### Compiling via Github Actions
+### (Recommended) Compiling via Github Actions
 
 1. Convert your APK signing key file to base64; here's a Linux example:
 ```shell
@@ -38,5 +38,13 @@ It is obtained directly by extracting the corresponding ABI Linux version archiv
 The project does not invoke methods from the so file within its code but treats the so as an executable file, executing the corresponding command through shell.  
 Due to Golang's zero-dependency characteristic, the executable file can be run directly through shell in Android.
 
-### Start at bootup and background keep-alive
-Designed according to the native Android specification, if there is any problem, please allow boot/background options in the system settings.
+### Connection Retry
+Add `loginFailExit = false` to the frpc configuration to prevent exiting after the first login failure, enabling multiple retry attempts.  
+This is useful in scenarios such as auto-start on boot, where the network may not be ready when frpc starts to connect and fails. Without this option, frpc will exit immediately after a failed attempt.
+
+### DNS Resolution Failure
+Starting from v1.3.0, devices with the arm64-v8a architecture use the android type frp kernel to solve DNS resolution issues.  
+Devices with armeabi-v7a and x86_64 architectures still use the linux type frp kernel, which may have DNS resolution problems. It is recommended to specify a DNS server using the `dnsServer` option in the configuration file.
+
+### Start at Boot and Background Keep-Alive
+The app is designed according to the native Android specification. However, some custom Android systems have stricter background management. Please manually enable the relevant options in the system settings. For example, on ColorOS 16, the connection may be disconnected when the app is sent to the background. After enabling [App Settings -> Power Management -> Fully Allow Background Activity], it will work normally.
