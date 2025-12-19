@@ -1,3 +1,4 @@
+import com.android.build.api.dsl.ApkSigningConfig
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.io.FileInputStream
 import java.util.Properties
@@ -11,7 +12,17 @@ plugins {
 
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties()
-keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
+val fileSigningAvailable = keystorePropertiesFile.exists() && listOf(
+    "keyAlias", "keyPassword", "storeFile", "storePassword"
+).all { !keystoreProperties.getProperty(it).isNullOrBlank() }
+
+val envSigningAvailable = listOf("KEY_ALIAS", "KEY_PASSWORD", "STORE_FILE", "STORE_PASSWORD").all {
+    !System.getenv(it).isNullOrBlank()
+}
 
 android {
     androidResources {
@@ -23,18 +34,38 @@ android {
         compose = true
     }
 
+    lateinit var releaseSigning: ApkSigningConfig
+
     signingConfigs {
-        create("AceKeystore") {
-            keyAlias = System.getenv("KEY_ALIAS") ?: keystoreProperties["keyAlias"] as String
-            keyPassword =
-                System.getenv("KEY_PASSWORD") ?: keystoreProperties["keyPassword"] as String
-            storeFile =
-                if (System.getenv("STORE_FILE") != null && System.getenv("STORE_FILE") != "") file("../keystore.jks") else file(
-                    keystoreProperties["storeFile"] as String
-                )
-            storePassword =
-                System.getenv("STORE_PASSWORD") ?: keystoreProperties["storePassword"] as String
+        val aceSigning = when {
+            fileSigningAvailable -> {
+                create("AceKeystore") {
+                    keyAlias = keystoreProperties.getProperty("keyAlias")
+                    keyPassword = keystoreProperties.getProperty("keyPassword")
+                    storeFile = file(keystoreProperties.getProperty("storeFile"))
+                    storePassword = keystoreProperties.getProperty("storePassword")
+                }
+            }
+
+            envSigningAvailable -> {
+                create("AceKeystore") {
+                    keyAlias = System.getenv("KEY_ALIAS")
+                    keyPassword = System.getenv("KEY_PASSWORD")
+                    storeFile = if (System.getenv("STORE_FILE")?.isNotBlank() == true) {
+                        // CI 跑脚本会生成 keystore.jks
+                        file("../keystore.jks")
+                    } else {
+                        file(System.getenv("STORE_FILE"))
+                    }
+                    storePassword = System.getenv("STORE_PASSWORD")
+                }
+            }
+
+            else -> null
         }
+
+        // 没有提供签名信息时，回退到 Android 默认的 debug 签名，保证本地/CI 可编译
+        releaseSigning = aceSigning ?: getByName("debug")
     }
 
     defaultConfig {
@@ -47,7 +78,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        signingConfig = signingConfigs.getByName("AceKeystore")
+        signingConfig = releaseSigning
 
         buildConfigField("String", "FrpcFileName", "\"libfrpc.so\"")
         buildConfigField("String", "FrpsFileName", "\"libfrps.so\"")
@@ -67,10 +98,10 @@ android {
                 // Includes a local, custom Proguard rules file
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("AceKeystore")
+            signingConfig = releaseSigning
         }
         getByName("debug") {
-            signingConfig = signingConfigs.getByName("AceKeystore")
+            signingConfig = releaseSigning
         }
     }
     compileOptions {

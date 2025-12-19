@@ -3,6 +3,10 @@ name: Android CI
 on:
   push:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'frp binaries release tag (optional)'
+        required: false
 
 jobs:
   build:
@@ -28,6 +32,7 @@ jobs:
       - name: Retrieve the secret and decode it to a file
         env:
           STORE_FILE: ${{ secrets.STORE_FILE }}
+        if: env.STORE_FILE != ''
         run: |
           echo $STORE_FILE | base64 --decode > keystore.jks
       - name: Retrieve the key rotation files and decode them to files
@@ -35,7 +40,7 @@ jobs:
         env:
           NEW_STORE_FILE: ${{ secrets.NEW_STORE_FILE }}
           LINEAGE: ${{ secrets.LINEAGE }}
-        if: env.NEW_STORE_FILE != null && env.LINEAGE != null
+        if: env.NEW_STORE_FILE != '' && env.LINEAGE != ''
         run: |
           echo $NEW_STORE_FILE | base64 --decode > new_keystore.jks
           echo $LINEAGE | base64 --decode > lineage
@@ -52,7 +57,7 @@ jobs:
       - name: Grant execute permission for update script
         run: chmod +x scripts/update_frp_binaries.sh
       - name: Update frp binaries (download latest)
-        run: ./scripts/update_frp_binaries.sh
+        run: ./scripts/update_frp_binaries.sh ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag != '' && format('--tag {0}', github.event.inputs.tag) || '' }}
       - name: Build with Gradle
         run: ./gradlew assembleRelease
         env:
