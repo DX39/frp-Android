@@ -226,7 +226,7 @@ class StopFrpRunner : TaskerPluginRunnerActionNoOutput<StopFrpInput>() {
     override fun run(context: Context, input: TaskerInput<StopFrpInput>): TaskerPluginResult<Unit> {
         // Check if Tasker is allowed
         val preferences = context.getSharedPreferences("data", Context.MODE_PRIVATE)
-        val allowTasker = preferences.getBoolean(PreferencesKey.ALLOW_TASKER, true)
+        val allowTasker = preferences.getBoolean(PreferencesKey.ALLOW_TASKER, false)
 
         if (!allowTasker) {
             return TaskerPluginResultError(

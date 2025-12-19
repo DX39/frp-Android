@@ -57,7 +57,7 @@ class SettingsActivity : ComponentActivity() {
     private val isStopBroadcast = MutableStateFlow(false)
     private val isStartupBroadcastExtra = MutableStateFlow(false)
     private val themeMode = MutableStateFlow("")
-    private val allowTasker = MutableStateFlow(true)
+    private val allowTasker = MutableStateFlow(false)
     private val excludeFromRecents = MutableStateFlow(false)
     private val hideServiceToast = MutableStateFlow(false)
     private val allowConfigRead = MutableStateFlow(false)
@@ -86,8 +86,8 @@ class SettingsActivity : ComponentActivity() {
         val rawTheme = preferences.getString(PreferencesKey.THEME_MODE, ThemeModeKeys.FOLLOW_SYSTEM)
         themeMode.value = ThemeModeKeys.normalize(rawTheme)
 
-        // 读取 Tasker 权限设置，默认为允许
-        allowTasker.value = preferences.getBoolean(PreferencesKey.ALLOW_TASKER, true)
+        // 读取 Tasker 权限设置，默认为不允许
+        allowTasker.value = preferences.getBoolean(PreferencesKey.ALLOW_TASKER, false)
 
         // 读取"最近任务中排除"设置，默认为不排除
         excludeFromRecents.value =
@@ -141,7 +141,7 @@ class SettingsActivity : ComponentActivity() {
     fun SettingsContent() {
         val isAutoStart by isStartup.collectAsStateWithLifecycle(false)
         val currentTheme by themeMode.collectAsStateWithLifecycle(themeMode.collectAsState().value.ifEmpty { ThemeModeKeys.FOLLOW_SYSTEM })
-        val isTaskerAllowed by allowTasker.collectAsStateWithLifecycle(true)
+        val isTaskerAllowed by allowTasker.collectAsStateWithLifecycle(false)
         val isExcludeFromRecents by excludeFromRecents.collectAsStateWithLifecycle(false)
         val isHideServiceToast by hideServiceToast.collectAsStateWithLifecycle(false)
         val isConfigReadAllowed by allowConfigRead.collectAsStateWithLifecycle(false)
