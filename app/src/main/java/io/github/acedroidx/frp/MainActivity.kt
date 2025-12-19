@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -48,6 +49,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -81,7 +85,6 @@ import java.util.Date
 import java.util.Locale
 import androidx.compose.runtime.collectAsState
 
-
 class MainActivity : ComponentActivity() {
     private val isStartup = MutableStateFlow(false)
     private val frpcConfigList = MutableStateFlow<List<FrpConfig>>(emptyList())
@@ -89,6 +92,8 @@ class MainActivity : ComponentActivity() {
     private val runningConfigList = MutableStateFlow<List<FrpConfig>>(emptyList())
     private val frpVersion = MutableStateFlow("")
     private val themeMode = MutableStateFlow("")
+    private val configTemplates =
+        MutableStateFlow<Map<FrpType, List<FrpConfigTemplate>>>(emptyMap())
 
     private lateinit var preferences: SharedPreferences
 
@@ -186,6 +191,7 @@ class MainActivity : ComponentActivity() {
         themeMode.value = ThemeModeKeys.normalize(rawTheme)
 
         checkConfig()
+        configTemplates.value = getFrpConfigTemplates(this)
         updateConfigList()
         createBGNotificationChannel()
 
@@ -387,7 +393,8 @@ class MainActivity : ComponentActivity() {
                                             Toast.LENGTH_SHORT
                                         ).show()
                                     }
-                                })) {
+                                })
+                    ) {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_pencil_24dp),
                             contentDescription = stringResource(R.string.content_desc_edit),
@@ -511,6 +518,18 @@ class MainActivity : ComponentActivity() {
     @Composable
     @Preview(showBackground = true)
     fun CreateConfigDialog(onClose: () -> Unit = {}) {
+        val templates by configTemplates.collectAsStateWithLifecycle(emptyMap())
+        val selectedType = remember { mutableStateOf(FrpType.FRPC) }
+
+        LaunchedEffect(templates) {
+            if (templates[selectedType.value].isNullOrEmpty()) {
+                val fallbackType = FrpType.values().firstOrNull { !templates[it].isNullOrEmpty() }
+                if (fallbackType != null) {
+                    selectedType.value = fallbackType
+                }
+            }
+        }
+
         BasicAlertDialog(onDismissRequest = { onClose() }) {
             Card(
                 modifier = Modifier
@@ -523,20 +542,95 @@ class MainActivity : ComponentActivity() {
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Text(
-                        stringResource(R.string.create_frp_select),
+                        stringResource(R.string.create_config_template_title),
                         modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center,
                         style = MaterialTheme.typography.titleLarge
                     )
-                    Row(
-                        horizontalArrangement = Arrangement.SpaceAround,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Button(onClick = { startConfigActivity(FrpType.FRPC); onClose() }) {
-                            Text(stringResource(R.string.frpc_label))
+                    val tabItems = listOf(FrpType.FRPC, FrpType.FRPS)
+                    val selectedIndex = tabItems.indexOf(selectedType.value).coerceAtLeast(0)
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        tabItems.forEachIndexed { index, type ->
+                            SegmentedButton(
+                                selected = selectedIndex == index,
+                                onClick = { selectedType.value = type },
+                                shape = SegmentedButtonDefaults.itemShape(
+                                    index = index, count = tabItems.size
+                                ),
+                                modifier = Modifier.weight(1f),
+                                label = {
+                                    Text(
+                                        when (type) {
+                                            FrpType.FRPC -> stringResource(R.string.frpc_label)
+                                            FrpType.FRPS -> stringResource(R.string.frps_label)
+                                        }
+                                    )
+                                })
                         }
-                        Button(onClick = { startConfigActivity(FrpType.FRPS); onClose() }) {
-                            Text(stringResource(R.string.frps_label))
+                    }
+                    val availableTemplates = templates[selectedType.value].orEmpty()
+                    if (availableTemplates.isEmpty()) {
+                        Text(
+                            stringResource(R.string.template_empty_message),
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center
+                        )
+                    } else {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 360.dp)
+                                .verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            availableTemplates.forEach { template ->
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                                            alpha = 0.35f
+                                        )
+                                    ),
+                                    onClick = {
+                                        createConfigFromTemplate(template)
+                                        onClose()
+                                    }) {
+                                    Column(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Text(
+                                            template.displayName,
+                                            style = MaterialTheme.typography.titleMedium
+                                        )
+                                        Text(
+                                            stringResource(
+                                                R.string.template_file_name, template.fileName
+                                            ),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            stringResource(
+                                                R.string.template_type_label, when (template.type) {
+                                                    FrpType.FRPC -> stringResource(R.string.frpc_label)
+                                                    FrpType.FRPS -> stringResource(R.string.frps_label)
+                                                }
+                                            ),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Row(
+                        horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()
+                    ) {
+                        TextButton(onClick = { onClose() }) {
+                            Text(stringResource(R.string.dismiss))
                         }
                     }
                 }
@@ -610,12 +704,33 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun startConfigActivity(type: FrpType) {
+        val targetTemplate = configTemplates.value[type]?.firstOrNull()
+        if (targetTemplate != null) {
+            createConfigFromTemplate(targetTemplate)
+            return
+        }
+        createConfigFromAsset(type, type.getConfigAssetsName())
+    }
+
+    private fun createConfigFromTemplate(template: FrpConfigTemplate) {
+        createConfigFromAsset(template.type, template.assetPath)
+    }
+
+    private fun createConfigFromAsset(type: FrpType, assetPath: String) {
         val currentDate = Date()
         val formatter = SimpleDateFormat("yyyy-MM-dd HH.mm.ss", Locale.getDefault())
         val formattedDateTime = formatter.format(currentDate)
         val fileName = "$formattedDateTime.toml"
-        val file = File(type.getDir(this), fileName)
-        file.writeBytes(resources.assets.open(type.getConfigAssetsName()).readBytes())
+        val targetDir = type.getDir(this)
+        if (!targetDir.exists()) {
+            targetDir.mkdirs()
+        }
+        val file = File(targetDir, fileName)
+        assets.open(assetPath).use { inputStream ->
+            file.outputStream().use { outputStream ->
+                inputStream.copyTo(outputStream)
+            }
+        }
         val config = FrpConfig(type, fileName)
         startConfigActivity(config)
     }

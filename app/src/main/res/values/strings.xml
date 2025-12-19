@@ -40,6 +40,10 @@
     <string name="confirm">Confirm</string>
     <string name="dismiss">Dismiss</string>
     <string name="create_frp_select">Select the type of frp to create</string>
+    <string name="create_config_template_title">Choose a template to create</string>
+    <string name="template_empty_message">No templates found. Please check assets/examples.</string>
+    <string name="template_file_name">File: %1$s</string>
+    <string name="template_type_label">Type: %1$s</string>
     <string name="tasker_config_title">Tasker frp Action</string>
     <string name="tasker_config_description">This action will start the specified frp configuration.  To use: Set variables in Tasker: • %frpType - \"frpc\" or \"frps\" • %configFileName - name of config file</string>
     <string name="tasker_select_config_title">Select frp Configuration</string>
