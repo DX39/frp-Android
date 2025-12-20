@@ -5,30 +5,32 @@ A frp client for Android
 [简体中文](README.md) | English
 
 <div style="display:inline-block">
-<img src="./image/image1_en.png" alt="image1_en.png" width="200">
-<img src="./image/image2_en.png" alt="image2_en.png" width="200">
+<img src="./image/image1_en.png" alt="image1_en.png" height="500">
+<img src="./image/image2_en.png" alt="image2_en.png" height="500">
 </div>
 
 ## Compilation Methods
 
 If you wish to customize the frp kernel, you can compile it via Github Actions or through Android Studio.
 
+The key-related steps below are optional; if you skip them, the app will be signed with Android's public default debug key.
+
 ### (Recommended) Compiling via Github Actions
 
-1. Convert your APK signing key file to base64; here's a Linux example:
+1. Fork this project.
+2. (Optional) Convert your APK signing key file to base64; here's a Linux example:
 ```shell
 base64 -w 0 keystore.jks > keystore.jks.base64
 ```
-2. Fork this project.
-3. Navigate to this page of the Github project: Settings > Secrets and variables > Actions > Repository secrets.
-4. Add the following four environment variables:
+3. (Optional) Navigate to this page of the Github project: Settings > Secrets and variables > Actions > Repository secrets.
+4. (Optional) Add the following four environment variables:
 ```KEY_ALIAS``` ```KEY_PASSWORD``` ```STORE_FILE``` ```STORE_PASSWORD```  
-The content for ```STORE_FILE``` should be the base64 from step 1, while you should fill in the other environment variables according to your key file.
-5. A push commit will automatically trigger compilation, or you can manually trigger it on the Actions page.
+The content for ```STORE_FILE``` should be the base64 from step 2, while you should fill in the other environment variables according to your key file.
+5. A push commit will automatically trigger compilation, or you can manually trigger it on the Actions page. When triggering manually, you may enter a specific frp kernel version tag to download (for example, v0.65.0); leave it blank or trigger automatically to download the latest version.
 
 ### Compiling via Android Studio
 
-1. Create an APK signing key configuration file named ```keystore.properties``` at the root directory of the project, referencing the existing ```keystore.example.properties``` file at the same level.
+1. (Optional) Create an APK signing key configuration file named ```keystore.properties``` at the root directory of the project, referencing the existing ```keystore.example.properties``` file at the same level.
 2. Refer to the [script instructions](./scripts/README.md) to run the `update_frp_binaries` script to obtain the latest frp kernel files, or manually download and place them in the appropriate directories.
 3. Compile and package using Android Studio.
 
@@ -48,6 +50,20 @@ Devices with armeabi-v7a and x86_64 architectures still use the linux type frp k
 
 ### Start at Boot and Background Keep-Alive
 The app is designed according to the native Android specification. However, some custom Android systems have stricter background management. Please manually enable the relevant options in the system settings. For example, on ColorOS 16, the connection may be disconnected when the app is sent to the background. After enabling [App Settings -> Power Management -> Fully Allow Background Activity], it will work normally.
+
+### Can I change the kernel version in the app? Can multiple frp kernels be bundled?
+Simply put: no. Please follow the compilation methods above to bundle your required kernel and build the APK.
+
+Since [Android 10+ removed execute permissions from the app's main directory](https://developer.android.com/about/versions/10/behavior-changes-10#execute-permission), it is impossible to dynamically download and run a new frp kernel file; only the needed kernel version packaged inside the APK can be executed.
+
+User needs vary and cannot be covered by a few bundled versions, so it is recommended that you compile your own build with the kernel version you need.
+
+There are other approaches, for example:
+
+- [NekoBoxForAndroid](https://github.com/MatsuriDayo/NekoBoxForAndroid) developed a plugin system to separate binaries into an APK plugin.
+- [termux](https://github.com/termux/termux-exec-package) uses certain techniques to execute binaries in restricted environments.
+
+However, these solutions are relatively complex, and with limited time and capability, they are not implemented here.
 
 ### BroadcastReceiver usage example
 Make sure to enable the corresponding "Startup at Broadcast" / "Stop at Broadcast" switches in Settings:

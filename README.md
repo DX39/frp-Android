@@ -5,30 +5,30 @@ A frp client for Android
 简体中文 | [English](README_en.md)
 
 <div style="display:inline-block">
-<img src="./image/image1.png" alt="image1.png" width="200">
-<img src="./image/image2.png" alt="image2.png" width="200">
+<img src="./image/image1.png" alt="image1.png" height="500">
+<img src="./image/image2.png" alt="image2.png" height="500">
 </div>
 
 ## 编译方法
 
-如果您想自定义frp内核，可以通过Github Actions或通过Android Studio编译
+如果您想更换frp内核，可以通过Github Actions或通过Android Studio编译
+
+下述密钥相关步骤可选，若跳过该步骤将会使用Android公开的默认调试密钥进行签名
 
 ### (推荐) 通过Github Actions编译
 
-1. 将您的apk签名密钥文件转为base64，以下为Linux示例
+1. fork本项目
+2. (可选) 将您的apk签名密钥文件转为base64，以下为Linux示例
 ```shell
 base64 -w 0 keystore.jks > keystore.jks.base64
 ```
-2. fork本项目
-3. 转到Github项目的此页面：Settings > Secrets and variables > Actions > Repository secrets
-4. 添加以下四个环境变量：
-```KEY_ALIAS``` ```KEY_PASSWORD``` ```STORE_FILE``` ```STORE_PASSWORD```  
-其中```STORE_FILE```的内容为步骤1的base64，其他环境变量内容请根据您的密钥文件自行填写
-5. Push提交自动触发编译或在Actions页面手动触发
+3. (可选) 转到Github项目的此页面：Settings > Secrets and variables > Actions > Repository secrets
+4. (可选) 添加以下四个环境变量：```KEY_ALIAS``` ```KEY_PASSWORD``` ```STORE_FILE``` ```STORE_PASSWORD```其中```STORE_FILE```的内容为步骤2的base64，其他环境变量内容请根据您的密钥文件自行填写
+5. 在Actions页面的Android CI手动触发或Push提交自动触发编译，手动触发时可输入指定的frp内核版本号tag进行下载(如v0.65.0)，留空和自动触发时下载最新版本
 
 ### 通过Android Studio编译
 
-1. 在项目根目录创建apk签名密钥设置文件```keystore.properties```, 内容参考同级的```keystore.example.properties```
+1. (可选) 在项目根目录创建apk签名密钥设置文件```keystore.properties```, 内容参考同级的```keystore.example.properties```
 2. 参考[脚本说明](./scripts/README.md)运行`update_frp_binaries`脚本以获取最新的frp内核文件，或者手动下载并放置到相应目录下
 3. 使用Android Studio进行编译打包
 
@@ -48,6 +48,20 @@ armeabi-v7a 和 x86_64 架构的设备仍然使用 linux 类型的 frp 内核，
 
 ### 开机自启与后台保活
 App 按照原生 Android 规范设计，然而部分国产系统拥有更严格的后台管控，请手动在系统设置内打开相应开关。例如 ColorOS 16 退到后台会断开连接，在【应用设置->耗电管理->完全允许后台行为】之后恢复正常
+
+### 能在应用内更换内核版本吗？能内置多个frp内核吗？
+简单来说：不能，请你参考上面的编译方法自行更换内核并编译Apk
+
+由于[Android 10+ 移除了应用主目录的执行权限](https://developer.android.com/about/versions/10/behavior-changes-10?hl=zh-cn#execute-permission)，因此无法动态下载并运行新的frp内核文件，只能在安装包内置需要的内核版本。
+
+用户的需求是不确定的，难以通过有限的内置版本满足所有用户，因此推荐用户自行编译以内置所需的内核版本。
+
+当然也有其他的方案，例如
+
+- [NekoBoxForAndroid](https://github.com/MatsuriDayo/NekoBoxForAndroid)开发了插件系统，可以将二进制文件分离出来作为Apk插件安装
+- [termux](https://github.com/termux/termux-exec-package)通过一些技巧实现了在受限环境下执行二进制文件
+
+但是这些方案都比较复杂，本人精力与能力有限，暂时无法实现
 
 ### BroadcastReceiver 使用示例
 需在设置中打开「在收到广播时启动/关闭」对应开关：
