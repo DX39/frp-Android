@@ -22,6 +22,10 @@ import java.util.Collections.emptyMap
 
 
 class ShellService : LifecycleService() {
+    companion object {
+        private const val MAX_LOG_LINES = 50
+    }
+
     private val _processThreads = MutableStateFlow(mutableMapOf<FrpConfig, ShellThread>())
     val processThreads = _processThreads.asStateFlow()
 
@@ -61,11 +65,11 @@ class ShellService : LifecycleService() {
                 }
             }
 
-            // 只返回最多20行
-            val logContent = if (lines.size <= 20) {
+            // 只返回最多50行
+            val logContent = if (lines.size <= MAX_LOG_LINES) {
                 lines.joinToString("\n")
             } else {
-                lines.takeLast(20).joinToString("\n")
+                lines.takeLast(MAX_LOG_LINES).joinToString("\n")
             }
 
             // 同时更新内存中的日志
@@ -135,8 +139,8 @@ class ShellService : LifecycleService() {
         // 添加新日志行
         lines.add(logLine)
 
-        // 如果超过20行，删除最旧的行
-        while (lines.size > 20) {
+        // 如果超过最大行数，删除最旧的行
+        while (lines.size > MAX_LOG_LINES) {
             lines.removeAt(0)
         }
 
